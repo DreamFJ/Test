@@ -3,6 +3,7 @@
     <FormFactory
       v-if="configList"
       ref="formRef"
+      v-model="formData"
       :formList="configList"
       labelWidth="170px"
     />
@@ -24,10 +25,17 @@ export default {
   },
   data() {
     return {
-      configList: null,
-      numberValidateForm: {
-        age: "3",
+      formData: {
+        dataItemChnNam: "顺序",
+        dataItemNam: "seque",
+        dataItemNum: "D00001",
+        dataItemTopic: "01",
+        dataItemType: "1",
+        dataType1: "",
+        dataType2: "",
+        name: "123",
       },
+      configList: null,
     };
   },
   created() {
@@ -39,9 +47,8 @@ export default {
             if (value) {
                 this.$refs.formRef.clearValidate(['dataType1', 'dataType2'])
             }
-            const formData = this.$refs.formRef.getFormData()
-            const { dataType1, dataType2 } = formData
-            console.log('有啊么', dataType1, dataType2)
+            // const formData = this.$refs.formRef.getFormData()
+            const { dataType1, dataType2 } = this.formData
             if (!dataType1 && !dataType2) {
                 return callback(new Error('请输入数据类型'))
             }
@@ -193,9 +200,9 @@ export default {
                   { code: "03", info: "03-协议" },
                 ],
               },
-              getAttrs(Model) {
+              getAttrs(model) {
                 //返回一个被合并到当前attrs属性里的对象
-                return Model.dataItemType !== "3" ? { disabled: true } : null;
+                return model.dataItemType !== "3" ? { disabled: true } : null;
                 }
             }),
           ],
@@ -248,10 +255,6 @@ export default {
             //       };
             //     }
             //   },
-              //   getAttrs(Model) {
-              //     //返回一个被合并到当前attrs属性里的对象
-              //     return Model.age === "22" ? { disabled: true } : null;
-              //   }
             }),
             generateComponent({
               type: "input",
@@ -270,10 +273,6 @@ export default {
                 key: "dataType2",
                 value: "",
               },
-              //   getAttrs(Model) {
-              //     //返回一个被合并到当前attrs属性里的对象
-              //     return Model.age === "22" ? { disabled: true } : null;
-              //   }
             }),
           ],
         }),
@@ -334,14 +333,13 @@ export default {
       this.$refs.formRef.validate((valid) => {
         console.log("验证结果", valid);
         if (valid) {
-          const formData = this.$refs.formRef.getFormData();
-          console.log("表单值", formData);
+          // const formData = this.$refs.formRef.getFormData();
+          console.log("表单值", this.formData)
         }
       });
     },
     resetForm() {
       this.$refs.formRef.resetFields();
-      this.$refs.numberValidateForm.resetFields();
     },
   },
 };

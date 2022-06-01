@@ -3,7 +3,7 @@
     class="tc-form-box"
     :ref="form"
     v-bind="$attrs"
-    :model="Model"
+    :model="model"
   >
     <div v-for="(formItemGroup, gIndex) in _formList" :key="gIndex">
       <!-- 分组 -->
@@ -42,7 +42,7 @@
             </span>
             <component
               :is="formItemCol.componentName"
-              v-model="Model[formItemCol.attrs.key]"
+              v-model="model[formItemCol.attrs.key]"
               v-bind="formItemCol.attrs || {}"
               v-on="formItemCol.listeners || {}"
             />
@@ -60,17 +60,23 @@ const form = Symbol("form") //保证每个表单实例有独一无二的标志�
 
 export default {
   props:{
+    value: Object, // 外面用来双向绑定的数据
     formList:Array
   },
   data () {
     return {
-      form,
+      form, // refs
       Model: {},
       originModel: {},
     }
   },
   computed: {
-    //根据 formList 计算出实际需要让页面渲染的真正的_formItem数据
+    // 用于双向绑定的数据
+    model() {
+      return this.value
+    },
+
+    //根据 formList 计算出实际需要让页面渲染的数据，会做一些默认处理
     _formList() {
       //this.Model中的值改变触发computed
       let _formList = []
@@ -78,55 +84,53 @@ export default {
         const { groupList } = formListItem
         formListItem.groupList = groupList.map(groupItem => {
           const { componentList } = groupItem
-          groupItem.componentList = componentList.map(item => this.computeFormItem(item, this.Model))
+          groupItem.componentList = componentList.map(item => this.computeFormItem(item, this.model))
           return groupItem
         })
         return formListItem
       })
-      // for (let i = 0; i < this.formList.length; i++) {
-      //   const { groupList } = this.formList[i]
-      //   for (let j = 0; j < groupList.length; j++) {
-      //     const { componentList } = groupList[j]
-      //     for (let k = 0; k < componentList.length; k++) {
-      //       const formItem = componentList[k]
-      //       _formList.push(this.computeFormItem(formItem, this.Model))
-      //     }
-      //   }
-      // }
-      console.log('_formList=======>', _formList)
       return _formList
     },
   },
   watch: {
-    formList: {
-      handler(val){
-        for (let i = 0; i < val.length; i++) {
-          const { groupList } = val[i]
-          for (let j = 0; j < groupList.length; j++) {
-            const { componentList } = groupList[j]
-            for (let k = 0; k < componentList.length; k++) {
-              const formItem = componentList[k]
-              // TODO: 考虑插槽
-              // if (!formItem.attrs || !formItem.attrs.key) return; //跳过没有key的属性(插槽)
-              const { key, value } = formItem.attrs
-              this.$set(
-                this.Model,
-                key,
-                value ? value : ''
-              )
-            }
-          }
-        }
-        this.originModel = JSON.parse(JSON.stringify(this.Model))
-        console.log('Model=======>', this.Model)
-        // console.log('表单改变了！！！', val)
-      },
-      deep: true,
-      immediate: true
-    }
+    // // 这里不用通过监听model的改变然后触发input事件让外面去更新值，因为绑定的是一个对象值，会直接改了外面的值
+    // model: {
+    //   handler (val) {
+    //     console.log('v-model值改了是什么', val)
+    //     this.$emit('input', val)
+    //   },
+    //   deep: true,
+    // },
+
+    // formList: {
+    //   handler(val){
+    //     for (let i = 0; i < val.length; i++) {
+    //       const { groupList } = val[i]
+    //       for (let j = 0; j < groupList.length; j++) {
+    //         const { componentList } = groupList[j]
+    //         for (let k = 0; k < componentList.length; k++) {
+    //           const formItem = componentList[k]
+    //           // TODO: 考虑插槽
+    //           // if (!formItem.attrs || !formItem.attrs.key) return; //跳过没有key的属性(插槽)
+    //           const { key, value } = formItem.attrs
+    //           this.$set(
+    //             this.Model,
+    //             key,
+    //             value ? value : ''
+    //           )
+    //         }
+    //       }
+    //     }
+    //     this.originModel = JSON.parse(JSON.stringify(this.Model))
+    //     console.log('Model=======>', this.Model)
+    //     // console.log('表单改变了！！！', val)
+    //   },
+    //   deep: true,
+    //   immediate: true
+    // }
   },
   created () {
-    console.log('有值吗', this.formList)
+    this.originModel = JSON.parse(JSON.stringify(this.value))
   },
   methods:{
     formItemBoxStyle (layout) {
@@ -143,7 +147,7 @@ export default {
       }
       return ret
     },
-    computeFormItem(formItem, Model) {
+    computeFormItem(formItem, model) {
       const item = { ...formItem }
       // 表单控件的类型
       let type = item.type || 'input'
@@ -154,24 +158,24 @@ export default {
       item.attrs = Object.assign({}, basicItem.attrs, item.attrs)
       // // 获取动态 formItemAttrs 主要用于动态设置表单校验规则
       // if (item.setFormItemAttrs) {
-      //   item.formItemAttrs = Object.assign(item.formItemAttrs, item.setFormItemAttrs(Model))
+      //   item.formItemAttrs = Object.assign(item.formItemAttrs, item.setFormItemAttrs(model))
       // }
       // 获取动态 Attributes
       if (item.getAttrs) {
-        item.attrs = Object.assign(item.attrs, item.getAttrs(Model))
+        item.attrs = Object.assign(item.attrs, item.getAttrs(model))
       }
       // // 条件渲染
-      // item._ifRender = item.ifRender ? item.ifRender(Model) : true;
+      // item._ifRender = item.ifRender ? item.ifRender(model) : true;
       // // 防止表单提交时存在多余 key
       // if (!item._ifRender) {
-      //   delete Model[item.attrs.key];
+      //   delete model[item.attrs.key];
       // }
       // form-item 配置
       return item
     },
     // 获取表单的model 数据
     getFormData () {
-      return this.Model
+      return this.model
     },
     validate (callback) {
       return this.$refs[form].validate(callback)
@@ -180,8 +184,8 @@ export default {
       return this.$refs[form].validateField(props, callback)
     },
     resetFields () {
-      // this.Model = JSON.parse(JSON.stringify(this.originModel))
-      return this.$refs[form].resetFields()
+      this.$emit('input', this.originModel)
+      this.$refs[form].clearValidate()
     },
     clearValidate (props) {
       return this.$refs[form].clearValidate(props)
